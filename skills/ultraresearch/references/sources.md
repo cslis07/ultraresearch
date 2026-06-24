@@ -84,6 +84,17 @@ https://lobste.rs/hottest.json        # search.json은 400 — 없음. hottest �
 - WAF 없음 → stdlib. 필드: `title|url|comments_url|score|comment_count|created_at|submitter_user.username|tags`.
 - `url`(외부 링크) 우선, 없으면 `comments_url`(Ask Lobsters 등). 테크 큐레이션 품질이 높지만 양은 적다.
 
+## Naver — search.naver.com 통합검색 (한국어 블로그·뉴스)
+
+```
+https://search.naver.com/search.naver?where=blog&query={q}&sort=1   # 최신순, 블로그 탭
+https://search.naver.com/search.naver?where=news&query={q}&sort=1   # 최신순, 뉴스 탭
+```
+- 무인증 HTML 스크래핑. `curl_cffi`(impersonate=safari) + `beautifulsoup4` 필요. 막히면 번들 엔진(`_engine_text`) 폴백.
+- **마크업 안정성**: 네이버는 검색 결과 마크업을 자주 갈아 CSS 셀렉터가 깨진다. 대신 **포스트 URL 정규식**으로 앵커를 잡고(`blog.naver.com/{handle}/{post_id}` 또는 `n.news.naver.com/.../article/...`), 거기서 카드 부모로 **올라가서** 헤드라인을 뽑는다(`_naver_title_for`). 뉴스는 앵커 텍스트가 `"네이버뉴스"`라 무용지물 → `stripped_strings`에서 junk 필터(`네이버뉴스`/`Keep에 바로가기` 등) 후 첫 12~140자 헤드라인을 잡는다.
+- **점수·날짜 미회수**: 검색 페이지에는 좋아요·댓글 수가 없고 발행시각도 카드별로 일관되지 않다. score/comments/created_at은 `None`. 정밀 신호가 필요하면 각 포스트 URL을 엔진으로 회수해 본문에서 추출(MVP 범위 밖).
+- 한국어 검색은 `quote_plus`로 URL 인코딩. `Accept-Language: ko-KR` 헤더 권장.
+
 ## 새 소스 추가 체크리스트
 
 1. `collectors.py`에 `collect_<name>(query, *, since, limit, diag) -> list[Item]` 추가. 예외 삼키고 `diag.append({...})`.

@@ -77,6 +77,12 @@ description: >
 - 각도가 여러 개면 각도별로 호출하거나, 핵심 각도 1~2개로 호출 후 결과를 보고 추가한다.
 - 출력 JSON의 `items`(정규화·랭킹됨), `by_source`, `diagnostics`, `agent_routes`를 읽는다.
 
+**`--format report` (결정적 자동 합성):** 위 호출에 `--format report`를 주면 수집기가 직접 교차검증 마크다운을 합성한다. 에이전트의 추가 추론 없이도 한 명령으로 완결된 리포트가 나온다.
+- 자동 클러스터: `github.com/owner/repo` 같은 *레포 시그니처*나 정규화된 URL이 **2개 이상 독립 소스**에 등장하면 R2-검증 클러스터로 묶어 표로 출력한다.
+- 단일 소스 항목은 `⚠ Unverified / single-source` 섹션에 들어가 R2 미검증 경고가 자동 표기된다.
+- 막힌 소스는 `Limits (R5)` 섹션에 정직하게 보고된다.
+- 합성 결과를 그대로 답에 붙여도 되지만, 사람이 추가 해석(왜 뜨는가·반례·미묘한 맥락)을 얹으면 더 좋다. report 모드는 **사실 골격**, 에이전트는 **해석**.
+
 **X/Twitter 수집(검색 API 없음 → 에이전트가 직접):** 출력의 `agent_routes.x`를 따른다:
 1. `WebSearch`로 트윗 URL 발굴: `<주제> (site:x.com OR site:twitter.com)`, 최근성 필요시 `when:7d`.
 2. 각 트윗 URL을 엔진으로 회수(무인증, Phase 0):
@@ -136,8 +142,10 @@ _수집: <소스들> · 최신성 <since> · 생성 <UTC>_
 | **devto** | 개발자 글·튜토리얼·도구 화제 | ▲reactions·💬 | 불필요 |
 | **github** | 떠오르는 OSS 도구/레포(스타순·최근 푸시) | ★stars | 불필요 |
 | **arxiv** | AI/ML 학술 신규 논문(트렌드 아님, 깊이용) | (날짜순) | 불필요 |
+| **naver** | **한국어 블로그·뉴스**(search.naver.com 통합검색) | (검색페이지엔 점수 없음) | curl_cffi + bs4 |
 
 기본 소스(`--sources` 생략 시): **hn, reddit, bluesky, devto, github**. `--sources all`=전체.
+한국어 주제는 `naver`를 추가하라: `--sources hn,reddit,bluesky,naver`.
 
 - **소비자/브랜드/여론 리서치** → **bluesky + x + reddit** 중심. (예: 화장품, 패션, 식음료) bluesky는 X와 달리 키워드 검색이 스크립트로 되니 1차 신호로 먼저 돌리고, X는 WebSearch로 보강한다.
   - ⚠ **bluesky 공개 검색은 NSFW가 섞인다** — 수집기가 self-label/태그 기반으로 1차 필터하지만 완벽하지 않다. 브랜드 리포트엔 명백한 성인 항목을 손으로 한 번 더 거른다.

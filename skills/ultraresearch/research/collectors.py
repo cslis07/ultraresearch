@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import sys
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -340,6 +341,109 @@ def collect_lobsters(query: str, *, since: Optional[str], limit: int, diag: list
     return items
 
 
+# --- Naver search (blog + news tabs, no auth — Korean coverage) ---------------
+# search.naver.com tabs change markup often. We anchor on POST URL regex and
+# climb the DOM for the title — far more stable than tab-specific CSS selectors.
+_NAVER_BLOG_RE = re.compile(r"https?://(?:m\.)?blog\.naver\.com/[\w-]+/\d{8,}")
+_NAVER_NEWS_RE = re.compile(r"https?://n\.news\.naver\.com/(?:mnews/)?article/[\w/.\-?=&]+")
+
+
+_NAVER_TITLE_JUNK = {
+    "네이버뉴스", "Keep에 바로가기", "Keep", "보기", "펼치기", "광고",
+    "네이버페이", "더보기", "이전", "다음",
+}
+
+
+def _naver_title_for(anchor, fallback: str) -> str:
+    """Find the headline near a Naver search-result anchor.
+
+    Naver search cards put the article URL on a utility anchor (text =
+    "네이버뉴스") and the real headline on a separate span/strong. Walk up to
+    the card container, then take the first stripped string that looks like a
+    headline (12-140 chars, not a known junk label, not numeric, not a URL).
+    """
+    title = (anchor.get_text(" ", strip=True) or "").strip()
+    if title and title not in _NAVER_TITLE_JUNK and 12 <= len(title) <= 140:
+        return title[:120]
+    card = anchor
+    for _ in range(8):
+        card = card.find_parent()
+        if card is None:
+            break
+        for s in card.stripped_strings:
+            s = s.strip()
+            if (12 <= len(s) <= 140 and s not in _NAVER_TITLE_JUNK
+                    and not s.isdigit() and not s.startswith("http")):
+                return s[:120]
+    return (title or fallback)[:120]
+
+
+def _naver_extract(html: str, post_re: re.Pattern, query: str, route: str,
+                   limit: int) -> list[Item]:
+    try:
+        from bs4 import BeautifulSoup  # type: ignore
+    except Exception:
+        return []
+    soup = BeautifulSoup(html, "html.parser")
+    seen: set[str] = set()
+    items: list[Item] = []
+    for a in soup.find_all("a", href=True):
+        m = post_re.search(a["href"])
+        if not m:
+            continue
+        url = m.group(0)
+        if url in seen:
+            continue
+        seen.add(url)
+        title = _naver_title_for(a, fallback="(post)")
+        items.append(Item(
+            source="naver", title=title, url=url,
+            author=None, score=None, comments=None, created_at=None,
+            snippet=None, query=query, route=route))
+        if len(items) >= limit:
+            break
+    return items
+
+
+def collect_naver(query: str, *, since: Optional[str], limit: int, diag: list) -> list[Item]:
+    headers = {"Accept-Language": "ko-KR,ko;q=0.9,en;q=0.5"}
+    tabs = [
+        ("blog", "search.naver:blog", _NAVER_BLOG_RE,
+         f"https://search.naver.com/search.naver?where=blog&query={quote_plus(query)}&sort=1"),
+        ("news", "search.naver:news", _NAVER_NEWS_RE,
+         f"https://search.naver.com/search.naver?where=news&query={quote_plus(query)}&sort=1"),
+    ]
+    per_tab = max(1, limit // 2 + limit % 2)
+    items: list[Item] = []
+    counts: dict[str, int] = {}
+    for tab, route, post_re, url in tabs:
+        try:
+            from curl_cffi import requests as r  # type: ignore
+            x = r.get(url, impersonate="safari", timeout=15, headers=headers,
+                      allow_redirects=True)
+            html = x.text if x.status_code == 200 else None
+        except Exception:
+            html = None
+        if not html:
+            html = _engine_text(url)
+        if not html:
+            counts[tab] = 0
+            continue
+        got = _naver_extract(html, post_re, query, route, per_tab)
+        items.extend(got)
+        counts[tab] = len(got)
+    if items:
+        diag.append({"source": "naver", "ok": True,
+                     "note": (f"{len(items)} (blog={counts.get('blog',0)}, "
+                              f"news={counts.get('news',0)}); sort=date desc; "
+                              f"no post-level dates/scores from search page")})
+    else:
+        diag.append({"source": "naver", "ok": False,
+                     "note": "no posts extracted — needs curl_cffi + beautifulsoup4; "
+                             "or Naver may have changed search markup"})
+    return items
+
+
 # --- registry & orchestrator -------------------------------------------------
 COLLECTORS: dict[str, Callable[..., list[Item]]] = {
     "hn": collect_hn,
@@ -349,6 +453,7 @@ COLLECTORS: dict[str, Callable[..., list[Item]]] = {
     "github": collect_github,
     "lobsters": collect_lobsters,
     "arxiv": collect_arxiv,
+    "naver": collect_naver,
 }
 
 DEFAULT_SOURCES = ["hn", "reddit", "bluesky", "devto", "github"]

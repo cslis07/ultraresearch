@@ -1,7 +1,7 @@
 {
   "name": "ultraresearch",
-  "version": "0.1.0",
-  "description": "Fast multi-source trend & research harness for Claude Code. Fan-out collects from Hacker News, Reddit, dev.to, GitHub, arXiv (and X/Twitter via the agent), cross-verifies across sources, and writes a cited report. Bundles the insane-search block-resistant engine so social/community sources actually return content.",
+  "version": "0.2.0",
+  "description": "Fast multi-source trend & research harness for Claude Code. Fan-out collects from Hacker News, Reddit, Bluesky, dev.to, GitHub, Lobsters, arXiv, and Naver (Korean blog/news) - plus X/Twitter via the agent. Cross-verifies across sources and can auto-synthesize a cited report (--format report). Bundles the insane-search block-resistant engine so social/community sources actually return content.",
   "author": {
     "name": "cslis07",
     "url": "https://github.com/cslis07"
@@ -17,6 +17,10 @@
     "harness",
     "hacker-news",
     "reddit",
+    "bluesky",
+    "lobsters",
+    "naver",
+    "korean",
     "twitter",
     "x",
     "github",

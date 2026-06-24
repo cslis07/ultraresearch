@@ -51,9 +51,11 @@ Claude가 이 스킬을 잡아 **수집 → 교차검증 → 인용 리포트**�
 | **hn** | 개발/AI/스타트업 트렌드 | 불필요 |
 | **devto** | 개발자 글·도구 화제 | 불필요 |
 | **github** | 떠오르는 OSS(스타순·최근 푸시) | 불필요 |
+| **lobsters** | 큐레이션 테크 글 | 불필요 |
 | **arxiv** | AI/ML 신규 논문(깊이용) | 불필요 |
+| **naver** | 한국어 블로그·뉴스(통합검색) | curl_cffi + bs4 |
 
-> HN·dev.to·GitHub·arXiv는 **무설치**(stdlib만). Reddit과 X-via-engine만 `curl_cffi>=0.15`가 필요하다.
+> HN·dev.to·GitHub·Lobsters·arXiv는 **무설치**(stdlib만). Reddit·Bluesky·Naver·X-via-engine만 `curl_cffi>=0.15`가 필요하다.
 
 ## 설치
 
@@ -94,6 +96,12 @@ python3 -m pip install -U "curl_cffi>=0.15.0" beautifulsoup4 pyyaml # macOS/Linu
 ```bash
 # 개발/AI 트렌드 — 무설치 4소스 병렬
 py -m research "AI coding agent" --sources hn,devto,github,arxiv --since 14d --limit 5 --format md
+
+# 자동 교차검증 리포트 (R2 검증/미검증 자동 분류)
+py -m research "AI coding agent" --sources all --since 14d --format report
+
+# 한국어 주제 (Naver 블로그·뉴스 포함)
+py -m research "아이폰 18" --sources naver,bluesky,reddit --format report
 
 # 브랜드/여론 — X 레시피 + Reddit
 py -m research "indie skincare brand" --sources x,reddit --since 7d --format json
