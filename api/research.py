@@ -126,12 +126,13 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801  Vercel convention
             # present: query => API, no query => serve the static index.
             split = urlsplit(self.path)
             if not split.query:
-                root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                idx = os.path.join(root, "public", "index.html")
-                if os.path.isfile(idx):
-                    with open(idx, "r", encoding="utf-8") as fh:
-                        self._send(200, fh.read(), "text/html")
-                    return
+                # public/index.html lives in the static CDN bundle, not in the
+                # lambda's filesystem, so we 302 to it rather than read the file.
+                self.send_response(302)
+                self.send_header("Location", "/index.html")
+                self.send_header("Cache-Control", "no-cache")
+                self.end_headers()
+                return
             qs = parse_qs(split.query, keep_blank_values=False)
             q = _qp(qs, "q")
             if not q:
