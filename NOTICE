@@ -1,0 +1,29 @@
+ultraresearch
+Copyright (c) 2026 cslis07
+
+This product bundles and builds upon third-party open-source software:
+
+────────────────────────────────────────────────────────────────────────
+insane-search  —  the block-resistant fetch engine under
+                   skills/ultraresearch/engine/
+────────────────────────────────────────────────────────────────────────
+Copyright (c) 2026 fivetaku
+Licensed under the MIT License.
+Source: https://github.com/fivetaku/insane-search
+
+The contents of skills/ultraresearch/engine/ are vendored from insane-search
+(the `skills/insane-search/engine/` package), with the following LOCAL
+MODIFICATIONS made for this distribution:
+
+  * engine/__main__.py — added a UTF-8 stdout/stderr reconfigure guard so the
+    CLI does not crash on legacy Windows consoles (cp949) when printing
+    em-dashes, Korean, or other non-ASCII content.
+  * the upstream engine/tests/ directory was omitted from the bundle.
+
+The orchestration layer (skills/ultraresearch/SKILL.md), the multi-source
+collector (skills/ultraresearch/research/), and all reference docs are original
+to ultraresearch and are licensed under the MIT License (see LICENSE).
+
+insane-search is itself part of the gptaku-plugins project. ultraresearch is an
+independent, unaffiliated work that depends on it; it is not endorsed by the
+insane-search authors.

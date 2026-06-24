@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Node (engine Playwright templates install here at runtime)
+node_modules/
+skills/ultraresearch/engine/templates/node_modules/
+
+# Local scratch
+*.log
+.env

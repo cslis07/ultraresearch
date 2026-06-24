@@ -1,0 +1,21 @@
+{
+  "name": "ultraresearch",
+  "interface": {
+    "displayName": "ultraresearch"
+  },
+  "owner": {
+    "name": "cslis07",
+    "url": "https://github.com/cslis07"
+  },
+  "plugins": [
+    {
+      "name": "ultraresearch",
+      "source": ".",
+      "category": "Research",
+      "description": "Fast multi-source trend & research harness — fan-out collect across HN/Reddit/Bluesky/dev.to/GitHub/Lobsters/arXiv (and X via the agent), cross-verify, write a cited report. Bundles the insane-search block-resistant engine.",
+      "policy": {
+        "installation": "AVAILABLE"
+      }
+    }
+  ]
+}

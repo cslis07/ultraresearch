@@ -1,0 +1,30 @@
+{
+  "name": "ultraresearch",
+  "version": "0.1.0",
+  "description": "Fast multi-source trend & research harness for Claude Code. Fan-out collects from Hacker News, Reddit, dev.to, GitHub, arXiv (and X/Twitter via the agent), cross-verifies across sources, and writes a cited report. Bundles the insane-search block-resistant engine so social/community sources actually return content.",
+  "author": {
+    "name": "cslis07",
+    "url": "https://github.com/cslis07"
+  },
+  "homepage": "https://github.com/cslis07/ultraresearch",
+  "repository": "https://github.com/cslis07/ultraresearch",
+  "license": "MIT",
+  "keywords": [
+    "research",
+    "trends",
+    "multi-source",
+    "fan-out",
+    "harness",
+    "hacker-news",
+    "reddit",
+    "twitter",
+    "x",
+    "github",
+    "devto",
+    "arxiv",
+    "insane-search",
+    "curl_cffi",
+    "tls-impersonation",
+    "ultraresearch"
+  ]
+}
