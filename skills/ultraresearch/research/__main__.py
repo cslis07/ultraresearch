@@ -21,6 +21,7 @@ import argparse
 import json
 import sys
 
+from . import cache as cache_mod
 from .collectors import collect, COLLECTORS, DEFAULT_SOURCES
 from .normalize import iso, now_utc
 
@@ -240,6 +241,11 @@ def build_parser() -> argparse.ArgumentParser:
                         "cited markdown report (R2 — items in ≥2 sources surfaced as "
                         "verified; single-source items flagged unverified).")
     p.add_argument("--max-workers", type=int, default=6, help="Concurrent collectors.")
+    p.add_argument("--cache", metavar="DIR", default=None,
+                   help="Cache directory for query results (file-based, TTL-gated). "
+                        "Recommended: ~/.cache/ultraresearch")
+    p.add_argument("--cache-ttl", type=int, default=600,
+                   help="Cache TTL in seconds (default 600 = 10 min).")
     return p
 
 
@@ -249,23 +255,30 @@ def main(argv: list[str] | None = None) -> int:
     scriptable = [s for s in requested if s in COLLECTORS]
     since = args.since if args.since.strip() else None
 
-    items, diag, by_source = collect(
-        args.query, sources=scriptable, since=since,
-        limit=args.limit, max_workers=args.max_workers,
-    )
-
-    payload = {
-        "query": args.query,
-        "since": since,
-        "generated_at": iso(now_utc()),
-        "sources_requested": requested,
-        "by_source": by_source,
-        "items": [it.to_dict() for it in items],
-        "diagnostics": diag,
-        "agent_routes": {},
-    }
-    if "x" in requested:
-        payload["agent_routes"]["x"] = _x_route(args.query)
+    cached = cache_mod.load(args.cache, args.query, scriptable, since,
+                            args.limit, args.cache_ttl)
+    if cached is not None:
+        payload = cached
+        payload["_cache"] = "hit"
+    else:
+        items, diag, by_source = collect(
+            args.query, sources=scriptable, since=since,
+            limit=args.limit, max_workers=args.max_workers,
+        )
+        payload = {
+            "query": args.query,
+            "since": since,
+            "generated_at": iso(now_utc()),
+            "sources_requested": requested,
+            "by_source": by_source,
+            "items": [it.to_dict() for it in items],
+            "diagnostics": diag,
+            "agent_routes": {},
+        }
+        if "x" in requested:
+            payload["agent_routes"]["x"] = _x_route(args.query)
+        cache_mod.store(args.cache, args.query, scriptable, since, args.limit, payload)
+        payload["_cache"] = "miss"
 
     if args.format == "md":
         print(_digest_md(payload))
@@ -274,7 +287,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
 
-    return 0 if items else 1
+    return 0 if payload.get("items") else 1
 
 
 if __name__ == "__main__":

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ultraresearch · 멀티소스 리서치 하네스</title>
+<style>
+  :root {
+    --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --accent: #58a6ff;
+    --card: #161b22; --border: #30363d; --ok: #3fb950; --warn: #f0b72f; --bad: #f85149;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.55 -apple-system, "Segoe UI", "Noto Sans KR", sans-serif;
+         background: var(--bg); color: var(--fg); }
+  header { padding: 24px 32px; border-bottom: 1px solid var(--border); }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: -0.01em; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+  header a { color: var(--accent); text-decoration: none; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 32px; }
+  form { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; margin-bottom: 12px; }
+  form input[type=text], form select, form button {
+    padding: 10px 12px; background: var(--card); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 6px; font: inherit;
+  }
+  form button { background: var(--accent); color: #0d1117; border-color: var(--accent);
+                cursor: pointer; font-weight: 600; }
+  form button:hover { filter: brightness(1.1); }
+  .sources { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 16px; }
+  .src { padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px;
+         cursor: pointer; user-select: none; font-size: 12px; }
+  .src.on { background: rgba(88,166,255,0.15); border-color: var(--accent); color: var(--accent); }
+  .src.blocked { opacity: 0.7; }
+  .src.blocked::after { content: " ⚠"; color: var(--warn); }
+  .hint { color: var(--muted); font-size: 12px; margin: 4px 0 16px; }
+  #status { color: var(--muted); font-size: 13px; min-height: 20px; }
+  #report { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            padding: 24px; margin-top: 16px; overflow-x: auto; }
+  #report h1, #report h2, #report h3 { letter-spacing: -0.01em; }
+  #report h1 { font-size: 20px; margin: 0 0 6px; }
+  #report h2 { font-size: 16px; margin: 22px 0 8px; padding-bottom: 6px;
+                border-bottom: 1px solid var(--border); }
+  #report h3 { font-size: 14px; margin: 16px 0 6px; color: var(--accent); }
+  #report a { color: var(--accent); }
+  #report code { background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 4px;
+                  font-size: 12px; }
+  #report table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  #report th, #report td { padding: 6px 10px; border-bottom: 1px solid var(--border);
+                            text-align: left; vertical-align: top; }
+  #report th { color: var(--muted); font-weight: 600; }
+  #report blockquote { border-left: 3px solid var(--accent); margin: 8px 0; padding: 4px 12px;
+                       color: var(--muted); }
+  #report em { color: var(--muted); }
+  footer { color: var(--muted); padding: 24px 32px; font-size: 12px; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>ultraresearch <span style="color:var(--muted);font-weight:normal;font-size:14px">· 멀티소스 리서치 하네스</span></h1>
+  <p>HN · Reddit · Bluesky · dev.to · GitHub · Lobsters · arXiv · Naver 동시 수집 → 교차검증 → 인용 리포트. <a href="https://github.com/cslis07/ultraresearch" target="_blank">GitHub</a></p>
+</header>
+
+<main>
+  <form id="f" onsubmit="run(event)">
+    <input id="q" type="text" placeholder="요새 핫한 AI 코딩 에이전트…" autofocus>
+    <select id="since">
+      <option value="24h">24시간</option>
+      <option value="7d" selected>7일</option>
+      <option value="14d">14일</option>
+      <option value="30d">30일</option>
+      <option value="">전체</option>
+    </select>
+    <select id="format">
+      <option value="report" selected>리포트 (교차검증)</option>
+      <option value="md">요약</option>
+      <option value="json">JSON</option>
+    </select>
+    <button type="submit">수집</button>
+  </form>
+
+  <div class="sources" id="sources"></div>
+  <p class="hint">⚠ 표시된 소스는 Vercel 데이터센터 IP에서 차단될 수 있습니다 (정직한 진단 — 작동 안 하면 로컬 CLI를 쓰세요).</p>
+
+  <div id="status"></div>
+  <article id="report"></article>
+</main>
+
+<footer>
+  Built on <a href="https://github.com/fivetaku/insane-search" target="_blank">insane-search</a> (MIT) ·
+  Bias against single-source claims (R2) · Cites every finding (R3) · Reports blocks honestly (R5)
+</footer>
+
+<script>
+const ALL_SOURCES = [
+  { id:"hn",       label:"HN",       blocked:false },
+  { id:"github",   label:"GitHub",   blocked:false },
+  { id:"devto",    label:"dev.to",   blocked:false },
+  { id:"lobsters", label:"Lobsters", blocked:false },
+  { id:"arxiv",    label:"arXiv",    blocked:false },
+  { id:"reddit",   label:"Reddit",   blocked:true  },  // TLS gating + IP-sensitive
+  { id:"bluesky",  label:"Bluesky",  blocked:true  },  // regional CDN gating
+  { id:"naver",    label:"Naver",    blocked:true  },  // proven to block Vercel IPs
+  { id:"x",        label:"X (agent)", blocked:true },   // no search API; CLI-only path
+];
+const DEFAULT_ON = new Set(["hn","github","devto","lobsters"]);
+
+const $src = document.getElementById("sources");
+ALL_SOURCES.forEach(s => {
+  const el = document.createElement("span");
+  el.className = "src" + (DEFAULT_ON.has(s.id) ? " on" : "") + (s.blocked ? " blocked" : "");
+  el.textContent = s.label;
+  el.dataset.id = s.id;
+  el.onclick = () => el.classList.toggle("on");
+  $src.appendChild(el);
+});
+
+function selectedSources() {
+  return [...$src.querySelectorAll(".src.on")].map(e => e.dataset.id);
+}
+
+// Minimal markdown -> HTML (only what our reports emit: headings, lists, links, tables, blockquotes, em/strong, code, hr)
+function mdToHtml(md) {
+  const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const inline = s => esc(s)
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_,t,u) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`)
+    .replace(/`([^`]+)`/g, (_,t) => `<code>${t}</code>`)
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/_([^_]+)_/g, "<em>$1</em>");
+  const lines = md.split("\n"); const out = [];
+  let inUl = false, inTable = false, tableHeaderDone = false;
+  const closeUl = () => { if (inUl) { out.push("</ul>"); inUl = false; } };
+  const closeTable = () => { if (inTable) { out.push("</tbody></table>"); inTable = false; tableHeaderDone = false; } };
+  for (const raw of lines) {
+    const ln = raw.replace(/\s+$/,"");
+    if (/^#{1,3} /.test(ln)) {
+      closeUl(); closeTable();
+      const lvl = ln.match(/^#+/)[0].length;
+      out.push(`<h${lvl}>${inline(ln.replace(/^#+\s*/,""))}</h${lvl}>`);
+    } else if (/^>\s?/.test(ln)) {
+      closeUl(); closeTable();
+      out.push(`<blockquote>${inline(ln.replace(/^>\s?/,""))}</blockquote>`);
+    } else if (/^\|/.test(ln)) {
+      closeUl();
+      if (!inTable) { out.push("<table>"); inTable = true; }
+      const cells = ln.replace(/^\||\|$/g,"").split("|").map(c => c.trim());
+      if (!tableHeaderDone) {
+        if (/^[-:\s|]+$/.test(ln)) { tableHeaderDone = true; out.push("<tbody>"); continue; }
+        out.push("<thead><tr>" + cells.map(c=>`<th>${inline(c)}</th>`).join("") + "</tr></thead>");
+      } else {
+        out.push("<tr>" + cells.map(c=>`<td>${inline(c)}</td>`).join("") + "</tr>");
+      }
+    } else if (/^- /.test(ln)) {
+      closeTable();
+      if (!inUl) { out.push("<ul>"); inUl = true; }
+      out.push(`<li>${inline(ln.replace(/^- /,""))}</li>`);
+    } else if (!ln.trim()) {
+      closeUl(); closeTable(); out.push("");
+    } else {
+      closeUl(); closeTable();
+      out.push(`<p>${inline(ln)}</p>`);
+    }
+  }
+  closeUl(); closeTable();
+  return out.join("\n");
+}
+
+async function run(ev) {
+  ev.preventDefault();
+  const q = document.getElementById("q").value.trim();
+  if (!q) return;
+  const sources = selectedSources().join(",") || "hn,github,devto,lobsters";
+  const since = document.getElementById("since").value;
+  const fmt = document.getElementById("format").value;
+  const $status = document.getElementById("status");
+  const $report = document.getElementById("report");
+  $status.textContent = `수집 중… (sources=${sources})`;
+  $report.innerHTML = "";
+  const t0 = performance.now();
+  try {
+    const url = `/api/research?q=${encodeURIComponent(q)}&sources=${encodeURIComponent(sources)}` +
+                `&since=${encodeURIComponent(since)}&format=${encodeURIComponent(fmt)}&limit=10`;
+    const res = await fetch(url);
+    const txt = await res.text();
+    const dt = ((performance.now() - t0)/1000).toFixed(1);
+    if (!res.ok) { $status.textContent = `오류 (${res.status}, ${dt}s)`; $report.textContent = txt; return; }
+    if (fmt === "json") {
+      $status.textContent = `완료 (${dt}s)`;
+      $report.innerHTML = `<pre style="white-space:pre-wrap;color:var(--fg);font:12px ui-monospace,Menlo,Consolas,monospace">${txt.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</pre>`;
+    } else {
+      $status.textContent = `완료 (${dt}s)`;
+      $report.innerHTML = mdToHtml(txt);
+    }
+  } catch (e) {
+    $status.textContent = `네트워크 오류: ${e.message}`;
+  }
+}
+</script>
+</body>
+</html>

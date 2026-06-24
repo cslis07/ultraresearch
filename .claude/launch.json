@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ultraresearch-dev",
+      "runtimeExecutable": "py",
+      "runtimeArgs": ["C:\\Users\\GB\\Documents\\mcp\\ultraresearch\\scripts\\dev_server.py", "--port", "3010"],
+      "port": 3010
+    }
+  ]
+}

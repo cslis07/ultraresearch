@@ -135,6 +135,56 @@ py -m engine "https://x.com/<handle>/status/<id>"
 }
 ```
 
+## 웹으로 쓰기 (Vercel 배포)
+
+이 저장소는 Vercel에 **그대로 배포**해 누구나 브라우저에서 검색할 수 있는 웹 UI를 갖는다.
+
+```
+ultraresearch/
+├── api/research.py     # Python 서버리스 핸들러 (= CLI와 동일 엔진)
+├── public/index.html   # 정적 프런트엔드 (다크 UI, 소스 토글, 리포트 렌더)
+├── vercel.json         # @vercel/python runtime + 라우팅
+└── requirements.txt    # curl_cffi, beautifulsoup4
+```
+
+**로컬 dev 서버** (Vercel 동일 핸들러를 그대로 호출):
+
+```bash
+py scripts/dev_server.py --port 3010
+# -> http://localhost:3010/
+```
+
+**배포:**
+
+```bash
+vercel link        # 최초 1회
+vercel             # 프리뷰 배포
+vercel --prod      # 프로덕션
+```
+
+### ⚠ 솔직한 IP 제약 (R5)
+
+Vercel 데이터센터 IP에서는 **차단 우회가 약화**된다. 프런트엔드의 소스 칩에 ⚠ 마크로 표시했고 진단(`diagnostics`)에 자동 보고된다:
+
+| 소스 | Vercel | 로컬 CLI |
+|------|--------|----------|
+| HN · GitHub · dev.to · Lobsters · arXiv | ✅ 정상 | ✅ |
+| Reddit · Bluesky | ⚠ TLS·지역 게이팅으로 자주 차단 | ✅ |
+| Naver | ❌ Vercel IP 명시 차단(실측) | ✅ |
+| X | n/a (검색 API 없음 — 에이전트 경로만) | ✅ (engine 경유) |
+
+**전략:** Vercel에는 공개 API 5개만 두고, 한국어/소셜 리서치는 로컬 CLI(또는 자가 서버)로 — 같은 코드, 같은 명령(`py -m research`). 정직한 진단 = 데이터센터 IP의 한계 그대로 보여주기.
+
+### 환경 변수 (선택)
+
+| 키 | 기본값 | 용도 |
+|---|---|---|
+| `ULTRARESEARCH_CACHE_DIR` | `/tmp/ultraresearch-cache` | 핸들러 캐시 디렉터리 |
+| `ULTRARESEARCH_CACHE_TTL` | 600 | 캐시 TTL (초) |
+| `ULTRARESEARCH_MAX_LIMIT` | 30 | 소스당 최대 항목 |
+| `ULTRARESEARCH_MAX_SOURCES` | 8 | 최대 동시 소스 수 |
+| `GITHUB_TOKEN` | (없음) | GitHub 검색 rate-limit 상향 |
+
 ## 라이선스 · 귀속
 
 MIT (see [LICENSE](LICENSE)). `skills/ultraresearch/engine/`는
