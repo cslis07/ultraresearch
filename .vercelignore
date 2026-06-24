@@ -1,0 +1,19 @@
+# The bundled insane-search engine is for the local CLI only.
+# Vercel has no Playwright runtime; engine's _engine_text fallback in
+# collectors.py silently returns None when the import fails, so excluding
+# the engine here just trims the upload — no behavior change on Vercel.
+skills/ultraresearch/engine/
+
+# Local dev scaffolding
+scripts/dev_server.py
+.claude/
+
+# Test artifacts / scratch
+__pycache__/
+*.py[cod]
+.pytest_cache/
+node_modules/
+.DS_Store
+Thumbs.db
+.env
+.next/

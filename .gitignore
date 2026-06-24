@@ -17,3 +17,5 @@ skills/ultraresearch/engine/templates/node_modules/
 # Local scratch
 *.log
 .env
+
+.vercel
