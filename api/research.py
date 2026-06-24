@@ -120,7 +120,18 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801  Vercel convention
 
     def do_GET(self):  # noqa: N802
         try:
-            qs = parse_qs(urlsplit(self.path).query, keep_blank_values=False)
+            # The new Vercel Python runtime routes everything through this
+            # entrypoint, so the static index.html is unreachable via /. Serve
+            # it ourselves; non-static path mismatches still hit the API path.
+            split = urlsplit(self.path)
+            if split.path in ("/", "", "/index.html"):
+                root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                idx = os.path.join(root, "public", "index.html")
+                if os.path.isfile(idx):
+                    with open(idx, "r", encoding="utf-8") as fh:
+                        self._send(200, fh.read(), "text/html")
+                    return
+            qs = parse_qs(split.query, keep_blank_values=False)
             q = _qp(qs, "q")
             if not q:
                 self._send(400, json.dumps({
