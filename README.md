@@ -135,6 +135,10 @@ py -m engine "https://x.com/<handle>/status/<id>"
 }
 ```
 
+## 🌐 라이브 데모
+
+**https://ultraresearch.vercel.app** — 검색창에 주제를 입력하면 HN·GitHub·dev.to·Lobsters·arXiv에서 즉시 수집한 cited report가 나옵니다. 한국어/소셜 소스(Naver·Reddit·Bluesky·X)는 ⚠ 표시 — Vercel IP 차단으로 약화되므로 로컬 CLI를 쓰세요.
+
 ## 웹으로 쓰기 (Vercel 배포)
 
 이 저장소는 Vercel에 **그대로 배포**해 누구나 브라우저에서 검색할 수 있는 웹 UI를 갖는다.
