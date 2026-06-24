@@ -1,0 +1,12 @@
+[project]
+name = "ultraresearch"
+version = "0.3.0"
+description = "Multi-source trend/research harness — Vercel deployment surface"
+requires-python = ">=3.11"
+dependencies = [
+  "curl_cffi>=0.15.0",
+  "beautifulsoup4>=4.12",
+]
+
+[tool.vercel]
+entrypoint = "api.research:handler"
