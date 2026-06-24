@@ -120,11 +120,12 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801  Vercel convention
 
     def do_GET(self):  # noqa: N802
         try:
-            # The new Vercel Python runtime routes everything through this
-            # entrypoint, so the static index.html is unreachable via /. Serve
-            # it ourselves; non-static path mismatches still hit the API path.
+            # Vercel's Python entrypoint runtime strips its mount prefix
+            # (/api/research), so self.path arrives as "/?q=..." for API calls
+            # and bare "/" for landing. Branch on whether a query string is
+            # present: query => API, no query => serve the static index.
             split = urlsplit(self.path)
-            if split.path in ("/", "", "/index.html"):
+            if not split.query:
                 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 idx = os.path.join(root, "public", "index.html")
                 if os.path.isfile(idx):
